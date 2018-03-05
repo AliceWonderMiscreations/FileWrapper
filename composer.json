@@ -1,0 +1,42 @@
+{
+    "name": "awonderphp/filewrapper",
+    "description": "A PHP Download Wrapper that supports ranges and minification",
+    "homepage": "https://github.com/AliceWonderMiscreations/FileWrapper",
+    "license": "MIT",
+    "type": "library",
+    "authors": [
+        {
+            "name": "Alice Wonder",
+            "role": "Unemployed Maniac",
+            "email": "paypal@domblogger.net"
+        },
+        {
+            "name": "Manas Tungare",
+            "homepage": "https://github.com/manastungare",
+            "role": "Github gist Solution"
+        },
+        {
+            "name": "Brenton Strine",
+            "homepage": "https://github.com/brentonstrine",
+            "role": "Github gist Solution"
+        },
+        {
+            "name": "Fosfor",
+            "homepage": "https://stackoverflow.com/users/615627/fosfor",
+            "role": "StackOverflow Solution"
+        }
+    ],
+    "require": {
+        "php": "~7.1.0 || ~7.2.0",
+        "patchwork/jsqueeze": "~2.0"
+    },
+    "require-dev": {
+        "squizlabs/php_codesniffer": "3.*",
+        "vimeo/psalm": "^0"
+    },
+    "autoload": {
+        "psr-4": {
+            "AWonderPHP\\FileWrapper\\": "lib/"
+        }
+    }
+}
