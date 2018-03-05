@@ -18,7 +18,7 @@ declare(strict_types = 1);
  | Dedicated to Empress Andi of www.phonesexprincessblog.com             |
  |                                                                       |
  +-----------------------------------------------------------------------+
- 
+
 */
 
 namespace AWonderPHP\FileWrapper;
@@ -143,17 +143,17 @@ class FileWrapper
      * The name of the requested file as the user would see it. Only really
      * matters for files that are downloaded. Set by constructor.
      *
-     * @var string
+     * @var null|string
      */
-    protected $request='';
+    protected $request = null;
 
     /**
      * MIME type to send with the file. When null, the class will attempt to figure out the
      * correct MIME to send. Set by validMimeType() method
      *
-     * @var string
+     * @var null|string
      */
-    protected $mime = '';
+    protected $mime = null;
 
     /**
      * If detected a text file, it is served differently
@@ -168,78 +168,131 @@ class FileWrapper
      * @var null|string
      */
     protected $allowOrigin = null;
-  
-  // When the client sends a header asking if the version of the file it has
-  //  is current and it is, the cachecheck() method sets this to TRUE so a
-  //  304 Not Modified header can be sent instead of the content.
+
+    /**
+     * When set to true by cachecheck() a 304 Not Modified is sent
+     *
+     * @var bool
+     */
     protected $cacheok = false;
 
-  // Whether or not we are sending the full file, or responding to a
-  //  partial content request. Set by the checkFullFile() method.
+    /**
+     * Gets set to false by checkFullFile() for partial content response
+     *
+     * @var bool
+     */
     protected $fullfile = true;
-  
-  // The size of the file. Set by the setFileProperties() method.
-    protected $filesize;
-  
-  // First byte to read when sending content. Set by the checkFullFile()
-  //  method.
+
+    /**
+     * Set by the setFileProperties() method
+     *
+     * @var null|int
+     */
+    protected $filesize = null;
+
+    /**
+     * First byte to read when sending content. Set by the checkFullFile() method
+     *
+     * @var int
+     */
     protected $start = 0;
-  
-  // Last byte to read when sending content. Set by the checkFullFile()
-  //  method.
+
+    /**
+     * Last byte to read when sending content. Set by the checkFullFile() method
+     *
+     * @var int
+     */
     protected $end = 0;
-  
-  // Total bytes to send. Set by the checkFullFile() method.
+
+    /**
+     * Total bytes to read when sending content. Set by the checkFullFile() method
+     *
+     * @var int
+     */
     protected $total = 0;
-  
-  // UNIX timestamp time stamp for the last time the file was modified.
-  // Set by the setFileProperties() method.
-    protected $timestamp;
-  
-  // String representation of above, used for header. Set by the
-  //  setFileProperties() method.
+
+    /**
+     * UNIX timestamp for last time file was modified. Set by setFileProperties() method
+     *
+     * @var int
+     */
+    protected $timestamp = 0;
+
+    /**
+     * String representation of last time file was modified. Set by setFileProperties() method.
+     *
+     * @var string
+     */
     protected $lastmod;
-  
-  // Unique idenifier for the current version of the file.
-  // Set by the setFileProperties() method.
-    protected $etag;
-  
-  // Trigger the browser to save the file? Set by constructor function
+
+    /**
+     * Unique identified for the current version of the file. Set by the setFileProperties() method
+     *
+     * @var null|string
+     */
+    protected $etag = null;
+
+    /**
+     * Whether or not to send as attachment. Set by constructor
+     *
+     * @bool
+     */
     protected $attachment = false;
-  
-  // Number of seconds the client should cache the file for. Set by the
-  //  constructor function.
+
+    /**
+     * Number of seconds the client should cache the file for. Set by the constructor
+     *
+     * @var int
+     */
     protected $maxage = 0;
   
 // Text file specific - set these in an extended class
 
-  // Do we want to change non-utf8 to utf8?
+    /**
+     * Should we convert non-utf8 to utf8? Set by extending class
+     *
+     * @var bool
+     */
     protected $toUTF8 = false;
 
-  // Do we want to minify JS/CSS
+    /**
+     * Should we minify JS/CSS? Set by extending class
+     *
+     * @var bool
+     */
     protected $minify = false;
-  
-  // charset list - can be overridden in extended class
+
+    /**
+     * Charset list - set by extending class
+     *
+     * @var string
+     */
     protected $charsetlist = 'auto';
-  
-  // character encoding
+
+    /**
+     * Character encoding. Set by the cleanSource() method
+     *
+     * @var null|string
+     */
     protected $charEnc='';
   
-  // character encoding
-    protected $charset;
+    /**
+     * Does not seem to be used
+     *
+     * @var null
+     */
+    protected $charset = null;
   
 // Protected Methods.
-  
-  // This function fixes common typos when specifying
-  //  a mime type in php scripts. It also fixes less
-  //  than precise mime types from the php fileinfo.so
-  //  extension that sniffs mime types.
-  // Replace this in an extended class for better accuracy
-  //  specific to the file types you serve if what is
-  //  here isn't complete enough for your needs.
-  // Or just always specify CORRECT mime type to the
-  //  constructor.
-    protected function mimeTypoFix($input)
+
+    /**
+     * Fixes common programmer typos and less than precise mime types that fileinfo.so
+     *
+     * @param string $input The MIME type to be checked and possibly fixed.
+     *
+     * @return string Either the input MIME type or a correction of it.
+     */
+    protected function mimeTypoFix($input): string
     {
         $input = trim($input);
         $mime = $input;
@@ -328,13 +381,18 @@ class FileWrapper
         }
         return $mime;
     }
-  
-  // Sets the mime type the file will be served with.
-  // Won't compensate for all errors in declared mime types
-  //  but will compensate for some.
-    protected function validMimeType($input)
+
+    /**
+     * Sets the MIME type the file will be served with. Does not compensate for all errors in
+     * declared MIME types but will compensate for some.
+     *
+     * @param null|string $input A MIME type
+     *
+     * @return void
+     */
+    protected function validMimeType($input): void
     {
-        if(! is_null($input)) {
+        if (! is_null($input)) {
             $input = trim(strtolower($input));
             $input = $this->mimeTypoFix($input);
             if (in_array($input, $this->validMime)) {
@@ -347,33 +405,38 @@ class FileWrapper
             $input = null;
         }
         $error = false;
-        if(! is_null($input)) {
-          $arr = explode('/', $input);
-          if (count($arr) != 2) {
-              $error = true;
-          } elseif (! in_array($arr[0], array('application', 'audio', 'font', 'image', 'multipart', 'text', 'video'))) {
-              $error = true;
-          }
-          if ($error) {
-              if (function_exists('finfo_open')) {
-                  if ($finfo = finfo_open(FILEINFO_MIME_TYPE)) {
-                      if ($mime = finfo_file($finfo, $this->path)) {
-                          $this->mime = $this->mimeTypoFix($mime);
-                          finfo_close($finfo);
-                          return;
-                      }
-                    finfo_close($finfo);
-                  }
-              }
-          }
+        if (! is_null($input)) {
+            $arr = explode('/', $input);
+            if (count($arr) != 2) {
+                $error = true;
+            } elseif (! in_array($arr[0], array('application', 'audio', 'font', 'image', 'multipart', 'text', 'video'))) {
+                $error = true;
+            }
+            if ($error) {
+                if (function_exists('finfo_open')) {
+                    if ($finfo = finfo_open(FILEINFO_MIME_TYPE)) {
+                        if ($mime = finfo_file($finfo, $this->path)) {
+                            $this->mime = $this->mimeTypoFix($mime);
+                            finfo_close($finfo);
+                            return;
+                        }
+                        finfo_close($finfo);
+                    }
+                }
+            }
         }
-        if(is_null($input)) {
+        if (is_null($input)) {
             $input = 'application/octet-stream';
         }
         $this->mime = $input;
     }
-  
-    protected function textCheck()
+
+    /**
+     * Attempts to detect if serving a text file.
+     *
+     * @return void
+     */
+    protected function textCheck(): void
     {
         $test = substr($this->mime, 0, 5);
         if ($test == 'text/') {
@@ -389,15 +452,16 @@ class FileWrapper
             $this->istext = true;
         }
     }
-  
-  // If we are a serving a font, default allowOrigin to *
-  //  My recommendation is to leave the default and use
-  //  php in the wrapper to check referer header. IFF
-  //  the client sends a referer header and it is not
-  //  in array of allowed, send a 403. If in list of
-  //  allowed or empty, then send font with this default
-  //  for the access-control-allow-origin
-    protected function fontCheck()
+
+    /**
+     * If serving a font, sets the allowOrigin to * which browsers need.
+     *
+     * You can use the PHP wrapper calling this class to send a 403 if the referer is not an
+     * approved domain.
+     *
+     * @return void
+     */
+    protected function fontCheck(): void
     {
         $test = substr($this->mime, 0, 5);
         if ($test == 'font/') {
@@ -408,9 +472,13 @@ class FileWrapper
             $this->allowOrigin = "*";
         }
     }
-  
-  // are we serving the full file or just part of it?
-    protected function checkFullFile()
+
+    /**
+     * Are we serving the full file or just part of it?
+     *
+     * @return void
+     */
+    protected function checkFullFile(): void
     {
         $this->end = $this->filesize - 1;
         $this->total = $this->filesize;
@@ -438,10 +506,13 @@ class FileWrapper
             }
         }
     }
-  
-  // sets class properties needed to generate unique Etag
-  //  and to serve the file
-    protected function setFileProperties()
+
+    /**
+     * Sets class properties needed to generate a unique Etag and to serve the file.
+     *
+     * @return void
+     */
+    protected function setFileProperties(): void
     {
         date_default_timezone_set('UTC');
         $this->filesize = filesize($this->path);
@@ -488,8 +559,12 @@ class FileWrapper
         $this->etag = sprintf("%x-%x-%x-%s", $inode, $this->filesize, $this->timestamp, $etagEnd);
         $this->checkFullFile();
     }
-  
-  // is the browser cached version okay?
+
+    /**
+     * Is the browser cached version okay?
+     *
+     * @return void
+     */
     protected function cachecheck()
     {
         if (isset($this->REQHEADERS['if-none-match'])) {
@@ -504,10 +579,14 @@ class FileWrapper
             }
         }
     }
-  
-  // reads the file or portion of binary file from the filesystem
-  //  and sends it to the browser
-    protected function readFromFilesystem()
+
+    /**
+     * Reads the file or portion of binary file from the filesystem and sends it to the
+     * client
+     *
+     * @return void
+     */
+    protected function readFromFilesystem(): void
     {
         $chunk = $this->chunksize;
         $sent = 0;
@@ -527,9 +606,13 @@ class FileWrapper
         }
         fclose($fp);
     }
-  
-  // Send headers and then the file, for binary file
-    protected function sendContent()
+
+    /**
+     * Send headers and then the file, for binary file
+     *
+     * @return void
+     */
+    protected function sendContent(): void
     {
       //make sure zlib output compression turned off
         ini_set("zlib.output_compression", "Off");
@@ -553,7 +636,7 @@ class FileWrapper
             header('Content-Length: ' . $this->total);
             header('Content-Range: bytes ' . $this->start . '-' . $this->end . '/' . $this->filesize);
         }
-        if(! is_null($this->allowOrigin)) {
+        if (! is_null($this->allowOrigin)) {
             header('access-control-allow-origin: ' . $this->allowOrigin);
         }
         header('Content-Type: ' . $this->mime);
@@ -563,9 +646,16 @@ class FileWrapper
   
 // Text file specific Protected Methods
 
-  // this function cleans up line breaks and attempts to convert files to UTF8
-  //  by default turned off
-    protected function cleanSource($content)
+    /**
+     * Cleans up line breaks and attempts to convert files to UTF8.
+     *
+     * By default this is turned off, extend class to use
+     *
+     * @param string $content The text to be cleaned and converted.
+     *
+     * @return string The cleaned content.
+     */
+    protected function cleanSource($content): string
     {
       //nuke BOM when we definitely have UTF8
         $bom = pack('H*', 'EFBBBF');
@@ -595,17 +685,33 @@ class FileWrapper
         }
         return($content);
     }
-  
-  // minify JavaScript - by default turned off
-    protected function jsminify($content)
+
+    /**
+     * Minify JavaScript. By default turned off, extend class to enable
+     *
+     * @param string $content The content to be minified
+     *
+     * @return string The minified content
+     */
+    protected function jsminify($content): string
     {
         $JSqueeze = new \Patchwork\JSqueeze();
         return($JSqueeze->squeeze($content, true, false));
     }
-  
-  // minify CSS - by default turned off
-  //  https://gist.github.com/brentonstrine/5f56a24c7d34bb2d4655
-    protected function cssminify($content)
+
+    /**
+     * Minify CSS. By default turned off, extend class to enable
+     *
+     * @author Manas Tungare  https://github.com/manastungare
+     * @author Brenton String https://gist.github.com/brentonstrine
+     *
+     * @link https://gist.github.com/brentonstrine/5f56a24c7d34bb2d4655
+     *
+     * @param string $content The content to be minified
+     *
+     * @return string The minified content
+     */
+    protected function cssminify($content): string
     {
         $content = preg_replace('!/\*[^*]*\*+([^/][^*]*\*+)*/!', '', $content);
         $content = str_replace(': ', ':', $content);
@@ -621,11 +727,22 @@ class FileWrapper
         $content = str_replace(array(' ,'), ',', $content);
         return $content;
     }
-  
-  // mb word-wrap text files
-  //  http://stackoverflow.com/questions/3825226/multi-byte-safe-wordwrap-function-for-utf-8
-  //  until php gets an actual mb_wordwrap function
-    protected function mb_wordwrap($str, $width = 75, $break = "\n", $cut = false)
+
+    /**
+     * MultiByte safe Word-Wrap, needed because PHP does not have it native.
+     *
+     * @author Fosfor
+     *
+     * @link https://stackoverflow.com/users/615627/fosfor
+     *
+     * @param string $str   The content to be wrapped
+     * @param int    $width The line wrap width to use
+     * @param string $break The separator between lines
+     * @param bool   $cut   Whether to hard cut
+     *
+     * @return string The Word-Wrapped content
+     */
+    protected function mbWordWrap($str, $width = 75, $break = "\n", $cut = false): string
     {
         $lines = explode($break, $str);
         foreach ($lines as &$line) {
@@ -659,7 +776,14 @@ class FileWrapper
     }
   
   // word wrap text files - by default turned off
-    protected function textwordwrap($content)
+    /**
+     * Word Wrap text files. Turned off by default, extend class to use.
+     *
+     * @param string $content The content to be word wrapped
+     *
+     * @return string The word wrapped content
+     */
+    protected function textwordwrap($content): string
     {
         $tmp = explode("\n", $content);
         $currmax = 0;
@@ -679,10 +803,10 @@ class FileWrapper
         if ($currmax > 120) {
             $n = count($tmp);
             for ($i=0; $i<$n; $i++) {
-                if (function_exists('mb_wordwrap')) {
-                    $tmp[$i] = mb_wordwrap($tmp[$i], 80, "\n", true);
+                if (function_exists('mbWordWrap')) {
+                    $tmp[$i] = mbWordWrap($tmp[$i], 80, "\n", true);
                 } elseif (function_exists('mb_strlen')) {
-                    $tmp[$i] = $this->mb_wordwrap($tmp[$i], 80, "\n", true);
+                    $tmp[$i] = $this->mbWordWrap($tmp[$i], 80, "\n", true);
                 } else {
                     $tmp[$i] = wordwrap($tmp[$i], 80, "\n", true);
                 }
@@ -691,9 +815,13 @@ class FileWrapper
         }
         return $content;
     }
-  
-  // reads text file from filesystem and sends to browser
-    protected function getTextContent()
+
+    /**
+     * Reads text file from filesystem and sends to browser
+     *
+     * @return void
+     */
+    protected function getTextContent(): void
     {
         $content = file_get_contents($this->path);
         if ($this->toUTF8) {
@@ -713,7 +841,7 @@ class FileWrapper
             }
         }
         $charset='';
-        if (strlen($this->charEnc) > 0) {
+        if (! is_null($this->charEnc)) {
             $charset='; charset=' . $this->charEnc;
         } elseif (function_exists('mb_detect_encoding')) {
             if ($ENC = mb_detect_encoding($content, $this->charsetlist, true)) {
@@ -724,8 +852,13 @@ class FileWrapper
         header_remove('X-Powered-By');
         print($content);
     }
-  
-    protected function serveText()
+
+    /**
+     * Serves text content
+     *
+     * @return void
+     */
+    protected function serveText(): void
     {
         if ($this->attachment) {
             header('Content-Description: File Transfer');
@@ -741,7 +874,7 @@ class FileWrapper
         if (ini_get('zlib.output_compression')) {
             header('Vary: Accept-Encoding');
         }
-        if(! is_null($this->allowOrigin)) {
+        if (! is_null($this->allowOrigin)) {
             header('access-control-allow-origin: ' . $this->allowOrigin);
         }
         $this->getTextContent();
@@ -749,17 +882,27 @@ class FileWrapper
   
 // Public Methods
 
-  // set the access-control-allow-origin header
-    public function setAllowOrigin($origin)
+    /**
+     * Set the access-control-allow-origin header
+     *
+     * @param string $origin The origin to allow
+     *
+     * @return void
+     */
+    public function setAllowOrigin($origin): void
     {
         $origin = trim($origin);
-        if(strlen($origin) > 0) {
-          $this->allowOrigin = $origin;
+        if (strlen($origin) > 0) {
+            $this->allowOrigin = $origin;
         }
     }
-  
-  // trigger serving of the file
-    public function sendfile()
+
+    /**
+     * Serve the file
+     *
+     * @return void
+     */
+    public function sendfile(): void
     {
         if ($this->cacheok) {
             header("HTTP/1.1 304 Not Modified");
@@ -781,13 +924,27 @@ class FileWrapper
     }
   
   // constructor function
-    public function __construct($path, $request = '', $mime = '', $maxage = 604800, $attachment = false)
+    /**
+     * Constructor function
+     *
+     * @param string      $path The path on the filesystem to file being served.
+     * @param null|string $request The file being requested
+     * @param null|string $mime The mime type of file being requested
+     * @param int         $maxage How long the file should be cached for
+     * @param bool        $attachment Whether or not to serve file as attachment
+     */
+    public function __construct($path, $request = null, $mime = '', $maxage = 604800, $attachment = false)
     {
         if (file_exists($path)) {
             $this->REQHEADERS=array_change_key_case(getallheaders(), CASE_LOWER);
             $this->path = $path;
-            $request = trim(basename($request));
-            if(strlen($request) === 0) {
+            if (! is_null($request)) {
+                $request = trim(basename($request));
+                if (strlen($request) === 0) {
+                    $request = null;
+                }
+            }
+            if (is_null($request)) {
                 $request = trim(basename($path));
             }
             $this->request = $request;
@@ -808,7 +965,6 @@ class FileWrapper
             }
         }
     }
-  //end of class
 }
 
 ?>
