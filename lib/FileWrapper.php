@@ -317,8 +317,7 @@ class FileWrapper
         }
         if (! is_null($request)) {
             if (! is_string($request)) {
-                //fix me exception
-                $a = '';
+                throw \AWonderPHP\FileWrapper\TypeErrorException::requestRequestType($request);
             }
             $request = trim(basename($request));
             if (strlen($request) === 0) {
@@ -334,8 +333,9 @@ class FileWrapper
     /**
      * Sets the maxage property
      *
-     * @param  int|string|\DateInterval $maxage The maximum age the client should cache the
+     * @param int|string|\DateInterval $maxage The maximum age the client should cache the
      *                                         file.
+     *
      * @return void
      */
     protected function setMaxAge($maxage): void
@@ -361,8 +361,7 @@ class FileWrapper
             }
         }
         if (! is_string($maxage)) {
-            //fixme
-            $a = '';
+            throw \AWonderPHP\FileWrapper\TypeErrorException::maxageWrongType($maxage);
         }
         if ($tstamp = strtotime($maxage, time())) {
             $seconds = time() - $tstamp;
@@ -491,8 +490,7 @@ class FileWrapper
         }
         if (! is_null($input)) {
             if (! is_string($input)) {
-                //fixme type error
-                $a = 'll';
+                throw \AWonderPHP\FileWrapper\TypeErrorException::mimeWrongType($input);
             }
             $input = trim(strtolower($input));
             try {
@@ -516,7 +514,13 @@ class FileWrapper
             $arr = explode('/', $input);
             if (count($arr) != 2) {
                 $error = true;
-            } elseif (! in_array($arr[0], array('application', 'audio', 'font', 'image', 'multipart', 'text', 'video'))) {
+            } elseif (! in_array($arr[0], array('application',
+                                                'audio',
+                                                'font',
+                                                'image',
+                                                'multipart',
+                                                'text',
+                                                'video'))) {
                 $error = true;
             }
             if ($error) {
@@ -1179,5 +1183,4 @@ class FileWrapper
     }
 // end of class
 }
-
 ?>

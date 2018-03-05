@@ -20,6 +20,10 @@ declare(strict_types = 1);
 
 namespace AWonderPHP\FileWrapper;
 
+/**
+ * Throws a \InvalidArgumentException when a parameter is of the correct type but is not a
+ * valid argument
+ */
 class InvalidArgumentException extends \InvalidArgumentException
 {
     /**
@@ -42,23 +46,4 @@ class InvalidArgumentException extends \InvalidArgumentException
         return new self(sprintf('The strtotime() command could not parse the string you supplied.'));
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ?>

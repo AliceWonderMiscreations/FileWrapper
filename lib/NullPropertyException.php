@@ -38,5 +38,4 @@ class NullPropertyException extends \ErrorException
         return new self(sprintf('The %s property is null. This should not have happened.', $property));
     }
 }
-
 ?>
