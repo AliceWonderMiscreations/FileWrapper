@@ -91,7 +91,7 @@
  +-----------------------------------------------------------------------+
 */
 
-namespace AliceWonderMiscreations\Utilities;
+namespace AWonderPHP\FileWrapper;
 
 class FileWrapper {
   // If one of these mime types is specified to the constructor, the class
