@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- PSR-2 but allow closing tags and with some Doc Comment stuff added -->
+<ruleset name="PHP_CodeSniffer">
+  <description>The coding standard for AWonderPHP</description>
+  <file>lib</file>
+  <arg name="basepath" value="."/>
+  <arg name="colors" />
+  <rule ref="PSR2">
+    <exclude name="PSR2.Files.ClosingTag" />
+    <exclude name="PSR2.Files.EndFileNewline" />
+  </rule>
+  <!-- Include rules related to Doc Comment I want -->
+  <rule ref="Generic.Commenting.DocComment.ShortNotCapital" />
+  <rule ref="Generic.Commenting.DocComment.SpacingBeforeTags" />
+  <rule ref="Generic.Commenting.DocComment.TagValueIndent" />
+  <rule ref="Generic.Commenting.DocComment.NonParamGroup" />
+  <rule ref="PEAR.Commenting.FileComment.MissingPackageTag" />
+  <rule ref="PEAR.Commenting.FileComment.PackageTagOrder" />
+  <rule ref="PEAR.Commenting.FileComment.MissingAuthorTag" />
+  <rule ref="PEAR.Commenting.FileComment.InvalidAuthors" />
+  <rule ref="PEAR.Commenting.FileComment.AuthorTagOrder" />
+  <rule ref="PEAR.Commenting.FileComment.MissingLicenseTag" />
+  <rule ref="PEAR.Commenting.FileComment.IncompleteLicense" />
+  <rule ref="PEAR.Commenting.FileComment.LicenseTagOrder" />
+  <rule ref="PEAR.Commenting.FileComment.MissingLinkTag" />
+  <rule ref="PEAR.Commenting.ClassComment.Missing" />
+  <rule ref="PEAR.Commenting.FunctionComment.Missing" />
+  <rule ref="PEAR.Commenting.FunctionComment.MissingParamTag" />
+  <rule ref="PEAR.Commenting.FunctionComment.MissingParamName" />
+  <rule ref="PEAR.Commenting.FunctionComment.MissingParamComment" />
+  <rule ref="PEAR.Commenting.FunctionComment.MissingReturn" />
+  <rule ref="PEAR.Commenting.FunctionComment.SpacingAfter" />
+</ruleset>
