@@ -25,9 +25,20 @@ namespace AWonderPHP\FileWrapper;
 
 /**
  * This class provides a PHP wrapper between the client requests and the files on the server.
+ *
+ * It handles most mime types intelligently and properly responds to client requests for
+ * partial content as well as requests to see if the client cached copy of the file is still
+ * valid.
  */
 class FileWrapper
 {
+    /**
+     * When sent to true, an internal error header will be sent
+     *
+     * @var bool
+     */
+    protected $internalError = false;
+
     /**
      * Array of known valid MIME types
      *
@@ -126,19 +137,14 @@ class FileWrapper
      * @var array
      */
     protected $REQHEADERS = array();
-  
-  // Full path on the filesystem to the static file being served by this
-  //  wrapper class. When empty, a 404 is sent. Set by constructor function
-  
+
     /**
      * Full path on file system to static file being served. When null, 404 is sent.
      *
      * @var null|string
      */
     protected $path = null;
-  
-  // The name of the requested file as the user would see it. Only really
-  //  matters for files that are downloaded. Set by constructor function
+
     /**
      * The name of the requested file as the user would see it. Only really
      * matters for files that are downloaded. Set by constructor.
@@ -170,7 +176,7 @@ class FileWrapper
     protected $allowOrigin = null;
 
     /**
-     * When set to true by cachecheck() a 304 Not Modified is sent
+     * When set to true by cacheCheck() a 304 Not Modified is sent
      *
      * @var bool
      */
@@ -223,7 +229,7 @@ class FileWrapper
      *
      * @var string
      */
-    protected $lastmod;
+    protected $lastmod = 'Thu, 01 Jan 1970 00:00:00 GMT';
 
     /**
      * Unique identified for the current version of the file. Set by the setFileProperties() method
@@ -286,6 +292,91 @@ class FileWrapper
 // Protected Methods.
 
     /**
+     * Sends a 500 internal server error
+     *
+     * @return void
+     */
+    protected function sendInternalError(): void
+    {
+        header($_SERVER['SERVER_PROTOCOL'] . ' 500 Internal Server Error', true, 500);
+        exit;
+    }
+    
+    /**
+     * Set the request property
+     *
+     * @param string|null $request The name of file as user sees it, only matter for file
+     *                             download
+     *
+     * @return void
+     */
+    protected function setRequest($request): void
+    {
+        if (is_null($this->path)) {
+            throw \AWonderPHP\FileWrapper\NullPropertyException::propertyIsNull('path');
+        }
+        if (! is_null($request)) {
+            if (! is_string($request)) {
+                //fix me exception
+                $a = '';
+            }
+            $request = trim(basename($request));
+            if (strlen($request) === 0) {
+                $request = null;
+            }
+        }
+        if (is_null($request)) {
+            $request = trim(basename($this->path));
+        }
+        $this->request = $request;
+    }
+
+    /**
+     * Sets the maxage property
+     *
+     * @param  int|string|\DateInterval $maxage The maximum age the client should cache the
+     *                                         file.
+     * @return void
+     */
+    protected function setMaxAge($maxage): void
+    {
+        if (is_int($maxage)) {
+            if ($maxage >= 0) {
+                $this->maxage = $maxage;
+                return;
+            } else {
+                throw \AWonderPHP\FileWrapper\InvalidArgumentException::negativeMaxAge();
+            }
+        }
+        if ($maxage instanceof \DateInterval) {
+            $dt = new \DateTime();
+            $dt->add($maxage);
+            $ts = $dt->getTimestamp();
+            $seconds = $ts - time();
+            if ($seconds >= 0) {
+                $this->maxage = $seconds;
+                return;
+            } else {
+                throw \AWonderPHP\FileWrapper\InvalidArgumentException::negativeMaxAge();
+            }
+        }
+        if (! is_string($maxage)) {
+            //fixme
+            $a = '';
+        }
+        if ($tstamp = strtotime($maxage, time())) {
+            $seconds = time() - $tstamp;
+            if ($seconds >= 0) {
+                $this->maxage = $seconds;
+                return;
+            } else {
+                throw \AWonderPHP\FileWrapper\InvalidArgumentException::negativeMaxAge();
+            }
+        }
+        throw \AWonderPHP\FileWrapper\InvalidArgumentException::invalidDateString();
+    }
+
+    /**
      * Fixes common programmer typos and less than precise mime types that fileinfo.so
      *
      * @param string $input The MIME type to be checked and possibly fixed.
@@ -294,6 +385,9 @@ class FileWrapper
      */
     protected function mimeTypoFix($input): string
     {
+        if (is_null($this->path)) {
+            throw \AWonderPHP\FileWrapper\NullPropertyException::propertyIsNull('path');
+        }
         $input = trim($input);
         $mime = $input;
         switch ($input) {
@@ -392,15 +486,28 @@ class FileWrapper
      */
     protected function validMimeType($input): void
     {
+        if (is_null($this->path)) {
+            throw \AWonderPHP\FileWrapper\NullPropertyException::propertyIsNull('path');
+        }
         if (! is_null($input)) {
+            if (! is_string($input)) {
+                //fixme type error
+                $a = 'll';
+            }
             $input = trim(strtolower($input));
-            $input = $this->mimeTypoFix($input);
+            try {
+                $input = $this->mimeTypoFix($input);
+            } catch (\ErrorException $e) {
+                error_log($e->getMessage());
+                $this->internalError = true;
+                return;
+            }
             if (in_array($input, $this->validMime)) {
                 $this->mime = $input;
                 return;
             }
         }
-      // do what we can
+        // do what we can
         if ($input == "application/octet-stream") {
             $input = null;
         }
@@ -416,7 +523,12 @@ class FileWrapper
                 if (function_exists('finfo_open')) {
                     if ($finfo = finfo_open(FILEINFO_MIME_TYPE)) {
                         if ($mime = finfo_file($finfo, $this->path)) {
-                            $this->mime = $this->mimeTypoFix($mime);
+                            try {
+                                $this->mime = $this->mimeTypoFix($mime);
+                            } catch (\ErrorException $e) {
+                                error_log($e->getMessage());
+                                $this->internalError = true;
+                            }
                             finfo_close($finfo);
                             return;
                         }
@@ -438,6 +550,9 @@ class FileWrapper
      */
     protected function textCheck(): void
     {
+        if (is_null($this->mime)) {
+            throw \AWonderPHP\FileWrapper\NullPropertyException::propertyIsNull('mime');
+        }
         $test = substr($this->mime, 0, 5);
         if ($test == 'text/') {
             $this->istext = true;
@@ -463,6 +578,9 @@ class FileWrapper
      */
     protected function fontCheck(): void
     {
+        if (is_null($this->mime)) {
+            throw \AWonderPHP\FileWrapper\NullPropertyException::propertyIsNull('mime');
+        }
         $test = substr($this->mime, 0, 5);
         if ($test == 'font/') {
             $this->allowOrigin = "*";
@@ -480,6 +598,9 @@ class FileWrapper
      */
     protected function checkFullFile(): void
     {
+        if (is_null($this->filesize)) {
+            throw \AWonderPHP\FileWrapper\NullPropertyException::propertyIsNull('filesize');
+        }
         $this->end = $this->filesize - 1;
         $this->total = $this->filesize;
         if ($this->istext) {
@@ -514,19 +635,22 @@ class FileWrapper
      */
     protected function setFileProperties(): void
     {
+        if (is_null($this->path)) {
+            throw \AWonderPHP\FileWrapper\NullPropertyException::propertyIsNull('path');
+        }
         date_default_timezone_set('UTC');
         $this->filesize = filesize($this->path);
         $this->timestamp = filemtime($this->path);
         $this->lastmod = preg_replace('/\+0000$/', 'GMT', date('r', $this->timestamp));
         $inode = fileinode($this->path);
-      // The f4a24ef etc strings - my understand in that
-      //  because of caching proxies, the Etag needs to be
-      //  different for different types of transfer encoding
-      //  (e.g. brotli, gzip, deflate) or content could be
-      //  delivered to a client that the client can not
-      //  decompress.
-      // This class assumes only text files will potentially
-      //  be further compressed when serving.
+        // The f4a24ef etc strings - my understand in that
+        //  because of caching proxies, the Etag needs to be
+        //  different for different types of transfer encoding
+        //  (e.g. brotli, gzip, deflate) or content could be
+        //  delivered to a client that the client can not
+        //  decompress.
+        // This class assumes only text files will potentially
+        //  be further compressed when serving.
         $etagEnd = 'f4a24ef';
         if ($this->istext) {
             if (ini_get('zlib.output_compression')) {
@@ -557,7 +681,13 @@ class FileWrapper
             }
         }
         $this->etag = sprintf("%x-%x-%x-%s", $inode, $this->filesize, $this->timestamp, $etagEnd);
-        $this->checkFullFile();
+        try {
+            $this->checkFullFile();
+        } catch (\ErrorException $e) {
+            error_log($e->getMessage());
+            $this->internalError = true;
+            return;
+        }
     }
 
     /**
@@ -565,8 +695,11 @@ class FileWrapper
      *
      * @return void
      */
-    protected function cachecheck()
+    protected function cacheCheck()
     {
+        if (is_null($this->etag)) {
+            throw \AWonderPHP\FileWrapper\NullPropertyException::propertyIsNull('etag');
+        }
         if (isset($this->REQHEADERS['if-none-match'])) {
             $reqETAG=trim($this->REQHEADERS['if-none-match'], '\'"');
             if (strcmp($reqETAG, $this->etag) == 0) {
@@ -588,6 +721,9 @@ class FileWrapper
      */
     protected function readFromFilesystem(): void
     {
+        if (is_null($this->path)) {
+            throw \AWonderPHP\FileWrapper\NullPropertyException::propertyIsNull('path');
+        }
         $chunk = $this->chunksize;
         $sent = 0;
         $fp = fopen($this->path, 'rb');
@@ -614,7 +750,27 @@ class FileWrapper
      */
     protected function sendContent(): void
     {
-      //make sure zlib output compression turned off
+        if (is_null($this->path)) {
+            $this->sendInternalError();
+            return;
+        }
+        if (is_null($this->request)) {
+            $this->sendInternalError();
+            return;
+        }
+        if (is_null($this->etag)) {
+            $this->sendInternalError();
+            return;
+        }
+        if (is_null($this->mime)) {
+            $this->sendInternalError();
+            return;
+        }
+        if (is_null($this->filesize)) {
+            $this->sendInternalError();
+            return;
+        }
+        //make sure zlib output compression turned off
         ini_set("zlib.output_compression", "Off");
     
         if ($this->attachment) {
@@ -641,7 +797,12 @@ class FileWrapper
         }
         header('Content-Type: ' . $this->mime);
         header_remove('X-Powered-By');
-        $this->readFromFilesystem();
+        try {
+            $this->readFromFilesystem();
+        } catch (\ErrorException $e) {
+            //FIX ME 500
+            $foo = 'bar';
+        }
     }
   
 // Text file specific Protected Methods
@@ -657,11 +818,14 @@ class FileWrapper
      */
     protected function cleanSource($content): string
     {
-      //nuke BOM when we definitely have UTF8
+        if (is_null($this->path)) {
+            throw \AWonderPHP\FileWrapper\NullPropertyException::propertyIsNull('path');
+        }
+        //nuke BOM when we definitely have UTF8
         $bom = pack('H*', 'EFBBBF');
-      //DOS to UNIX
+        //DOS to UNIX
         $content = str_replace("\r\n", "\n", $content);
-      //Classic Mac to UNIX
+        //Classic Mac to UNIX
         $content = str_replace("\r", "\n", $content);
         if (function_exists('mb_detect_encoding')) {
             if (mb_detect_encoding($content, 'UTF-8', true)) {
@@ -774,8 +938,7 @@ class FileWrapper
         }
         return implode($break, $lines);
     }
-  
-  // word wrap text files - by default turned off
+
     /**
      * Word Wrap text files. Turned off by default, extend class to use.
      *
@@ -823,9 +986,23 @@ class FileWrapper
      */
     protected function getTextContent(): void
     {
+        if (is_null($this->path)) {
+            $this->sendInternalError();
+            return;
+        }
+        if (is_null($this->mime)) {
+            $this->sendInternalError();
+            return;
+        }
         $content = file_get_contents($this->path);
         if ($this->toUTF8) {
-            $content = $this->cleanSource($content);
+            try {
+                $content = $this->cleanSource($content);
+            } catch (\ErrorException $e) {
+                error_log($e->getMessage());
+                $this->sendInternalError();
+                return;
+            }
         }
         if ($this->minify) {
             switch ($this->mime) {
@@ -860,6 +1037,14 @@ class FileWrapper
      */
     protected function serveText(): void
     {
+        if (is_null($this->request)) {
+            $this->sendInternalError();
+            return;
+        }
+        if (is_null($this->etag)) {
+            $this->sendInternalError();
+            return;
+        }
         if ($this->attachment) {
             header('Content-Description: File Transfer');
             header('Content-Disposition: attachment; filename="' . $this->request . '"');
@@ -904,6 +1089,9 @@ class FileWrapper
      */
     public function sendfile(): void
     {
+        if ($this->internalError) {
+            $this->sendInternalError();
+        }
         if ($this->cacheok) {
             header("HTTP/1.1 304 Not Modified");
             return;
@@ -922,49 +1110,74 @@ class FileWrapper
         }
         $this->sendContent();
     }
-  
-  // constructor function
+
     /**
      * Constructor function
      *
-     * @param string      $path The path on the filesystem to file being served.
-     * @param null|string $request The file being requested
-     * @param null|string $mime The mime type of file being requested
-     * @param int         $maxage How long the file should be cached for
-     * @param bool        $attachment Whether or not to serve file as attachment
+     * @param string                   $path The path on the filesystem to file being served.
+     * @param null|string              $request The file being requested
+     * @param null|string              $mime The mime type of file being requested
+     * @param int|string|\DateInterval $maxage How long the file should be cached for
+     * @param bool                     $attachment Whether or not to serve file as attachment
      */
-    public function __construct($path, $request = null, $mime = '', $maxage = 604800, $attachment = false)
+    public function __construct(string $path, $request = null, $mime = null, $maxage = 604800, bool $attachment = false)
     {
+        // validate input types
+        
+        
         if (file_exists($path)) {
             $this->REQHEADERS=array_change_key_case(getallheaders(), CASE_LOWER);
             $this->path = $path;
-            if (! is_null($request)) {
-                $request = trim(basename($request));
-                if (strlen($request) === 0) {
-                    $request = null;
-                }
+            try {
+                $this->setRequest($request);
+            } catch (\ErrorException $e) {
+                error_log($e->getMessage());
+                $this->internalError = true;
+                return;
             }
-            if (is_null($request)) {
-                $request = trim(basename($path));
+            try {
+                $this->validMimeType($mime);
+            } catch (\ErrorException $e) {
+                error_log($e->getMessage());
+                $this->internalError = true;
+                return;
             }
-            $this->request = $request;
-            $this->validMimeType($mime);
-            $this->textCheck();
-            $this->fontCheck();
-            $this->setFileProperties();
-            $this->cachecheck();
+            try {
+                $this->textCheck();
+            } catch (\ErrorException $e) {
+                error_log($e->getMessage());
+                $this->internalError = true;
+                return;
+            }
+            try {
+                $this->fontCheck();
+            } catch (\ErrorException $e) {
+                error_log($e->getMessage());
+                $this->internalError = true;
+                return;
+            }
+            try {
+                $this->setFileProperties();
+            } catch (\ErrorException $e) {
+                error_log($e->getMessage());
+                $this->internalError = true;
+                return;
+            }
+            try {
+                $this->cacheCheck();
+            } catch (\ErrorException $e) {
+                error_log($e->getMessage());
+                $this->internalError = true;
+                return;
+            }
             if ($attachment) {
                 $this->attachment=true;
             } else {
-                if (is_numeric($maxage)) {
-                    $maxage = intval($maxage, 10);
-                    if ($maxage > 0) {
-                        $this->maxage = $maxage;
-                    }
-                }
+                $this->setMaxAge($maxage);
             }
         }
     }
+// end of class
 }
 
 ?>
