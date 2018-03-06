@@ -436,6 +436,7 @@ class FileWrapper
                 break;
             case 'video/matroska':
                 $mime = 'video/x-matroska';
+                // test the extension too so no break
             case 'video/x-matroska':
                 $arr = explode('.', $this->path);
                 $ext = strtolower(end($arr));
