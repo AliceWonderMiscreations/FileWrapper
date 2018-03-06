@@ -59,7 +59,7 @@ class TypeErrorException extends \TypeError
      *
      * @return \TypeError
      */
-    public static function requestRequestType($var)
+    public static function requestWrongtType($var)
     {
         $type = gettype($var);
         return new self(sprintf('The $request parameter must be NULL or a string. You supplied a %s.', $type));

@@ -2,7 +2,13 @@
 declare(strict_types = 1);
 
 /**
- * A download wrapper
+ * An advanced PHP download wrapper
+ *
+ * This class provides a PHP wrapper between the client requests and the files on the server.
+ *
+ * It handles most mime types intelligently and properly responds to client requests for
+ * partial content as well as requests to see if the client cached copy of the file is still
+ * valid.
  *
  * @package AWonderPHP\FileWrapper
  * @author  Alice Wonder <paypal@domblogger.net>
@@ -162,7 +168,7 @@ class FileWrapper
     protected $mime = null;
 
     /**
-     * If detected a text file, it is served differently
+     * If the class detects a text file, it is served differently
      *
      * @var bool
      */
@@ -232,7 +238,7 @@ class FileWrapper
     protected $lastmod = 'Thu, 01 Jan 1970 00:00:00 GMT';
 
     /**
-     * Unique identified for the current version of the file. Set by the setFileProperties() method
+     * Unique identifier for the current version of the file. Set by the setFileProperties() method
      *
      * @var null|string
      */
@@ -317,7 +323,7 @@ class FileWrapper
         }
         if (! is_null($request)) {
             if (! is_string($request)) {
-                throw \AWonderPHP\FileWrapper\TypeErrorException::requestRequestType($request);
+                throw \AWonderPHP\FileWrapper\TypeErrorException::requestWrongType($request);
             }
             $request = trim(basename($request));
             if (strlen($request) === 0) {
@@ -340,43 +346,45 @@ class FileWrapper
      */
     protected function setMaxAge($maxage): void
     {
+        $now = time();
         if (is_int($maxage)) {
+            if ($maxage > $now) {
+                $this->maxage = $maxage - $now;
+                return;
+            }
             if ($maxage >= 0) {
                 $this->maxage = $maxage;
                 return;
-            } else {
-                throw \AWonderPHP\FileWrapper\InvalidArgumentException::negativeMaxAge();
             }
+            throw \AWonderPHP\FileWrapper\InvalidArgumentException::negativeMaxAge();
         }
         if ($maxage instanceof \DateInterval) {
             $dt = new \DateTime();
             $dt->add($maxage);
             $ts = $dt->getTimestamp();
-            $seconds = $ts - time();
+            $seconds = $ts - $now;
             if ($seconds >= 0) {
                 $this->maxage = $seconds;
                 return;
-            } else {
-                throw \AWonderPHP\FileWrapper\InvalidArgumentException::negativeMaxAge();
             }
+            throw \AWonderPHP\FileWrapper\InvalidArgumentException::negativeMaxAge();
         }
         if (! is_string($maxage)) {
             throw \AWonderPHP\FileWrapper\TypeErrorException::maxageWrongType($maxage);
         }
         if ($tstamp = strtotime($maxage, time())) {
-            $seconds = time() - $tstamp;
+            $seconds = $tstamp - $now;
             if ($seconds >= 0) {
                 $this->maxage = $seconds;
                 return;
-            } else {
-                throw \AWonderPHP\FileWrapper\InvalidArgumentException::negativeMaxAge();
             }
+            throw \AWonderPHP\FileWrapper\InvalidArgumentException::negativeMaxAge();
         }
         throw \AWonderPHP\FileWrapper\InvalidArgumentException::invalidDateString();
     }
 
     /**
-     * Fixes common programmer typos and less than precise mime types that fileinfo.so
+     * Fixes common programmer typos and less than precise mime types from fileinfo.so
      *
      * @param string $input The MIME type to be checked and possibly fixed.
      *
@@ -428,7 +436,6 @@ class FileWrapper
                 break;
             case 'video/matroska':
                 $mime = 'video/x-matroska';
-                break;
             case 'video/x-matroska':
                 $arr = explode('.', $this->path);
                 $ext = strtolower(end($arr));
@@ -558,12 +565,12 @@ class FileWrapper
             throw \AWonderPHP\FileWrapper\NullPropertyException::propertyIsNull('mime');
         }
         $test = substr($this->mime, 0, 5);
-        if ($test == 'text/') {
+        if ($test === 'text/') {
             $this->istext = true;
             return;
         }
         $test = substr($this->mime, -4);
-        if ($test == "+xml") {
+        if ($test === "+xml") {
             $this->istext = true;
             return;
         }
@@ -803,9 +810,9 @@ class FileWrapper
         header_remove('X-Powered-By');
         try {
             $this->readFromFilesystem();
-        } catch (\ErrorException $e) {
-            //FIX ME 500
-            $foo = 'bar';
+        } catch (\Error $e) {
+            error_log($e->getMessage())
+            $this->sendInternalError();
         }
     }
   
@@ -1081,6 +1088,8 @@ class FileWrapper
     public function setAllowOrigin($origin): void
     {
         $origin = trim($origin);
+        // fixme - send catchable error if origin isn't valid
+        //  possibly could check with filter_var
         if (strlen($origin) > 0) {
             $this->allowOrigin = $origin;
         }
