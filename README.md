@@ -74,7 +74,7 @@ them:
 
     class textwrapper extends \AliceWonderMiscreations\Utilities\FileWrapper
     {
-        __construct($path, $request = null, $mime = null, $minify = false)
+        public function __construct(string $path, $request = null, $mime = null, bool $minify = false)
         {
             $this->toUTF8 = true;
             $maxage = 604800;
