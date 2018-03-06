@@ -314,6 +314,8 @@ class FileWrapper
      * @param string|null $request The name of file as user sees it, only matter for file
      *                             download
      *
+     * @psalm-suppress RedundantConditionGivenDocblockType
+     *
      * @return void
      */
     protected function setRequest($request): void
@@ -341,6 +343,8 @@ class FileWrapper
      *
      * @param int|string|\DateInterval $maxage The maximum age the client should cache the
      *                                         file.
+     *
+     * @psalm-suppress RedundantConditionGivenDocblockType
      *
      * @return void
      */
@@ -489,6 +493,8 @@ class FileWrapper
      *
      * @param null|string $input A MIME type
      *
+     * @psalm-suppress RedundantConditionGivenDocblockType
+     *
      * @return void
      */
     protected function validMimeType($input): void
@@ -624,7 +630,15 @@ class FileWrapper
                 list($size_unit, $range_orig) = explode('=', $_SERVER['HTTP_RANGE'], 2);
                 if ($size_unit == 'bytes') {
                     $this->fullfile = false;
-                    list($range, $extra_ranges) = explode(',', $range_orig, 2);
+                    //below causes noise in log, so do w/ if then instead. Not using extra_ranges anyway
+                    //list($range, $extra_ranges) = explode(',', $range_orig, 2);
+                    $arr = explode(',', $range_orig, 2);
+                    if (isset($arr[1])) {
+                        $extra_ranges = $arr[1];
+                    } else {
+                        $extra_ranges = null;
+                    }
+                    $range = $arr[0];
                     list($start, $end) = explode('-', $range, 2);
                 } else {
                     $this->badrange = true;
@@ -812,7 +826,7 @@ class FileWrapper
         try {
             $this->readFromFilesystem();
         } catch (\Error $e) {
-            error_log($e->getMessage())
+            error_log($e->getMessage());
             $this->sendInternalError();
         }
     }
