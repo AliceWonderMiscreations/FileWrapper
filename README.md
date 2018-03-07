@@ -19,6 +19,16 @@ The class supports partial content requests and client cache validation. With
 partial content requests, at this time only responds with the first partial
 content range specified, it ignores the other parts.
 
+The class also supports requests from the client asking if the version of the
+file it has is up to date.
+
+1. [Install](#install)
+2. [Using the Class](#using-the-class)
+3. [Example Usage](#example-usage)
+4. [Catchable Exceptions](#catchable-exceptions)
+5. [Extending the Class](#extending-the-class)
+6. [Unit Testing](#unit-testing)
+
 
 Install
 -------
@@ -54,8 +64,8 @@ but it is not yet ready for deployment, and as of today (March 06 2018) it will
 likely be awhile.
 
 
-Calling the Class
------------------
+Using the Class
+---------------
 
 The class constructor has one required argument and four optional arguments.
 The required argument is first, the path on the filesystem to the file being
@@ -67,22 +77,25 @@ served. The most basic way to use this class:
 The parameters the constructor takes:
 
 1. `$path` -- __Required__  
-  The path on the filesystem to the file being served.
+  The path on the filesystem to the file being served. Always a `string`.
 2. `$request` -- __Optional__  
   The name of the requested file that the client will see. This only matters if
   it is different than the name of the file on the filesystem *and* the file is
   being served as an attachment for the client to save to its local filesystem.
-  Set it to `null` to just use the name of the file in `$path`.
+  Set it to `null` to just use the name of the file in `$path`, otherwise set
+  it to a `string`. Default value is `null`.
 3. `$mime` -- __Optional__  
   The MIME type the file should be served with. The class will attempt to sniff
   the correct MIME type if set to `null` but it is better to explicitly specify
-  the MIME type.
+  the MIME type. Use a `string` to specify a MIME type. To tell the clas detect
+  the mime type, set to `null`.
 4. `$maxage` -- __Optional__  
   How long the client should cache the file for. This parameter can either be
   an integer representing number of seconds, an integer representing the UNIX
   timestamp when you want the cache to expire, a string that can be parsed by
   the `strtotime()` command specifying when you want the cache to expire, or a
   `\DateInterval` object specifying how long the browser should cache it for.
+  The default value is `604800` seconds, which is one week.
 5. `$attachment` -- __Optional__  
   Whether a header should be sent telling the client to save the file. Boolean
   default to `false`.
@@ -115,7 +128,7 @@ This example serves an image file:
 The class will figure out the file is `image/jpeg` and serve the file to the
 requesting client as such.
 
-### Video Download
+### Audio Download
 
 This example uses all five parameters to serve an audio file that the client
 save to disk:
@@ -172,10 +185,6 @@ This exception should never happen, if it happens it is due to a bug in the
 class.
 
 
-
-
-
-
 Extending the Class
 -------------------
 
@@ -185,7 +194,7 @@ JavaScript/CSS files, and word-wrapping of plain text files. While those
 methods are in this class, they are not enabled, extend the class to enable
 them:
 
-    class textwrapper extends \AliceWonderMiscreations\Utilities\FileWrapper
+    class TextWrapper extends \AliceWonderMiscreations\Utilities\FileWrapper
     {
         public function __construct(string $path, $request = null, $mime = null, bool $minify = false)
         {
