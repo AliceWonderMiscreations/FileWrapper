@@ -20,12 +20,125 @@ partial content requests, at this time only responds with the first partial
 content range specified, it ignores the other parts.
 
 
+Install
+-------
 
-README NOT FINISHED
-===================
+When there is a release, you can add this to a composer project via:
 
-I will finish today or tomorrow. The sections below are the end, it is the
-middle I have to write.
+    "require": {
+        "awonderphp/filewrapper": "^1.0"
+    },
+    
+As long as your `composer.json` allows the [Packagist](https://packagist.org/)
+repository, that should pull in this library when you run the command:
+
+    composer install
+
+### Manual Installation
+
+For manual instalation, there are four class libraries you need to have where
+your auto-loader can find them:
+
+1. `FileWrapper.php` -- This is the class library.
+2. `InvalidArgumentException.php` -- An exception library.
+3. `TypeErrorException.php` -- An exception library.
+4. `NullPropertyException.php` -- An exception library.
+
+All four libraries use the namespace `\AWonderPHP\FileWrapper`
+
+### RPM Installation
+
+I have started a project called
+[PHP Composer Class Manager](https://github.com/AliceWonderMiscreations/php-ccm)
+but it is not yet ready for deployment, and as of today (March 06 2018) it will
+likely be awhile.
+
+
+Calling the Class
+-----------------
+
+The class constructor has one required argument and four optional arguments.
+The required argument is first, the path on the filesystem to the file being
+served. The most basic way to use this class:
+
+    use \AWonderPHP\FileWrapper\FileWrapper as FileWrapper;
+    $obj = new FileWrapper('/srv/whatever/foo.mp4`);
+
+The parameters the constructor takes:
+
+1. `$path` -- __Required__  
+  The path on the filesystem to the file being served.
+2. `$request` -- __Optional__  
+  The name of the requested file that the client will see. This only matters if
+  it is different than the name of the file on the filesystem *and* the file is
+  being served as an attachment for the client to save to its local filesystem.
+  Set it to `null` to just use the name of the file in `$path`.
+3. `$mime` -- __Optional__  
+  The MIME type the file should be served with. The class will attempt to sniff
+  the correct MIME type if set to `null` but it is better to explicitly specify
+  the MIME type.
+4. `$maxage` -- __Optional__  
+  How long the client should cache the file for. This parameter can either be
+  an integer representing number of seconds, an integer representing the UNIX
+  timestamp when you want the cache to expire, a string that can be parsed by
+  the `strtotime()` command specifying when you want the cache to expire, or a
+  `\DateInterval` object specifying how long the browser should cache it for.
+5. `$attachment` -- __Optional__  
+  Whether a header should be sent telling the client to save the file. Boolean
+  default to `false`.
+
+There are two public functions available once you have instantiated the class:
+
+### `$obj->setAllowOrigin($origin)`
+
+In some cases you may have a need to set the `access-control-allow-origin`
+header. This function allows you to set it. Note that if the class is serving
+a font, it automatically sets that header to `*` unless you specify otherwise.
+
+### `$obj->sendfile()`
+
+This causes the file to be sent to the requesting client.
+
+
+Example Usage
+-------------
+
+### Image File
+
+This example serves an image file:
+
+    use \AWonderPHP\FileWrapper\FileWrapper as FileWrapper;
+    $obj = new FileWrapper('/srv/images/sexy.jpg');
+    $obj->sendfile();
+    exit();
+
+The class will figure out the file is `image/jpeg` and serve the file to the
+requesting client as such.
+
+### Video Download
+
+This example uses all five parameters to serve an audio file that the client
+save to disk:
+
+    use \AWonderPHP\FileWrapper\FileWrapper as FileWrapper;
+    $obj = new FileWrapper('/srv/media/549805.mka', 'teaseme.mka', 'audio/x-matroska', 0, true);
+    $obj->sendfile();
+    exit();
+
+The file on the server filesystem is named `549804.mka` which is not a very
+descriptive name, so we use the second argument to give a more descriptive
+file name the end user will benefit from.
+
+The MIME type is explicitly set to `audio/x-matroska` which is helpful to the
+client knowing what type of file is being downloaded.
+
+We set the seconds for caching the file to 0 since it is a download, though
+honestly that can be set to `null` as the cache time is not applicable to file
+transfer.
+
+Finally, we use `true` as the last argument so that the server sends the right
+header to trigger the client to save the file to disk rather than open it in
+the browser window.
 
 
 Catchable Exceptions
