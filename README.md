@@ -46,7 +46,7 @@ repository, that should pull in this library when you run the command:
 
 ### Manual Installation
 
-For manual instalation, there are four class libraries you need to have where
+For manual installation, there are four class libraries you need to have where
 your auto-loader can find them:
 
 1. `FileWrapper.php` -- This is the class library.
@@ -87,8 +87,8 @@ The parameters the constructor takes:
 3. `$mime` -- __Optional__  
   The MIME type the file should be served with. The class will attempt to sniff
   the correct MIME type if set to `null` but it is better to explicitly specify
-  the MIME type. Use a `string` to specify a MIME type. To tell the clas detect
-  the mime type, set to `null`.
+  the MIME type. Use a `string` to specify a MIME type. To tell the class
+  detect the mime type, set to `null`.
 4. `$maxage` -- __Optional__  
   How long the client should cache the file for. This parameter can either be
   an integer representing number of seconds, an integer representing the UNIX
