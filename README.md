@@ -1,5 +1,5 @@
-\AWonderPHP\FileWrapper
-=======================
+FileWrapper
+===========
 
 An advanced PHP download wrapper
 

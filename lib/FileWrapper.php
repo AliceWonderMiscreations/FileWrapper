@@ -1066,6 +1066,8 @@ class FileWrapper
      */
     protected function serveText(): bool
     {
+        // move this to a class property in future FIXME
+        $vary = array();
         if (is_null($this->request)) {
             $this->sendInternalError();
             return false;
@@ -1086,7 +1088,16 @@ class FileWrapper
         header('Last-Modified: ' . $this->lastmod);
         header('ETag: "' . $this->etag . '"');
         if (ini_get('zlib.output_compression')) {
-            header('Vary: Accept-Encoding');
+            $vary[] = 'Accept-Encoding';
+        }
+        if (! is_null($this->allowOrigin)) {
+            if ($this->allowOrigin !== '*') {
+                $vary[] = 'Origin';
+            }
+        }
+        if (count($vary) > 0) {
+            $string = 'Vary: ' . implode(',', $vary);
+            header($string);
         }
         if (! is_null($this->allowOrigin)) {
             header('access-control-allow-origin: ' . $this->allowOrigin);
