@@ -772,29 +772,29 @@ class FileWrapper
     /**
      * Send headers and then the file, for binary file
      *
-     * @return void
+     * @return bool True on success, False on failure
      */
-    protected function sendContent(): void
+    protected function sendContent(): bool
     {
         if (is_null($this->path)) {
             $this->sendInternalError();
-            return;
+            return false;
         }
         if (is_null($this->request)) {
             $this->sendInternalError();
-            return;
+            return false;
         }
         if (is_null($this->etag)) {
             $this->sendInternalError();
-            return;
+            return false;
         }
         if (is_null($this->mime)) {
             $this->sendInternalError();
-            return;
+            return false;
         }
         if (is_null($this->filesize)) {
             $this->sendInternalError();
-            return;
+            return false;
         }
         //make sure zlib output compression turned off
         ini_set("zlib.output_compression", "Off");
@@ -828,7 +828,9 @@ class FileWrapper
         } catch (\Error $e) {
             error_log($e->getMessage());
             $this->sendInternalError();
+            return false;
         }
+        return true;
     }
   
 // Text file specific Protected Methods
@@ -1008,17 +1010,17 @@ class FileWrapper
     /**
      * Reads text file from filesystem and sends to browser
      *
-     * @return void
+     * @return bool True on success, False on failure
      */
-    protected function getTextContent(): void
+    protected function getTextContent(): bool
     {
         if (is_null($this->path)) {
             $this->sendInternalError();
-            return;
+            return false;
         }
         if (is_null($this->mime)) {
             $this->sendInternalError();
-            return;
+            return false;
         }
         $content = file_get_contents($this->path);
         if ($this->toUTF8) {
@@ -1027,7 +1029,7 @@ class FileWrapper
             } catch (\ErrorException $e) {
                 error_log($e->getMessage());
                 $this->sendInternalError();
-                return;
+                return false;
             }
         }
         if ($this->minify) {
@@ -1054,22 +1056,25 @@ class FileWrapper
         header('Content-Type: ' . $this->mime . $charset);
         header_remove('X-Powered-By');
         print($content);
+        return true;
     }
 
     /**
      * Serves text content
      *
-     * @return void
+     * @return bool True on success, False on failure
      */
-    protected function serveText(): void
+    protected function serveText(): bool
     {
+        // move this to a class property in future FIXME
+        $vary = array();
         if (is_null($this->request)) {
             $this->sendInternalError();
-            return;
+            return false;
         }
         if (is_null($this->etag)) {
             $this->sendInternalError();
-            return;
+            return false;
         }
         if ($this->attachment) {
             header('Content-Description: File Transfer');
@@ -1083,12 +1088,21 @@ class FileWrapper
         header('Last-Modified: ' . $this->lastmod);
         header('ETag: "' . $this->etag . '"');
         if (ini_get('zlib.output_compression')) {
-            header('Vary: Accept-Encoding');
+            $vary[] = 'Accept-Encoding';
+        }
+        if (! is_null($this->allowOrigin)) {
+            if ($this->allowOrigin !== '*') {
+                $vary[] = 'Origin';
+            }
+        }
+        if (count($vary) > 0) {
+            $string = 'Vary: ' . implode(',', $vary);
+            header($string);
         }
         if (! is_null($this->allowOrigin)) {
             header('access-control-allow-origin: ' . $this->allowOrigin);
         }
-        $this->getTextContent();
+        return $this->getTextContent();
     }
   
 // Public Methods
@@ -1113,30 +1127,30 @@ class FileWrapper
     /**
      * Serve the file
      *
-     * @return void
+     * @return bool True on success, False on failure
      */
-    public function sendfile(): void
+    public function sendfile(): bool
     {
         if ($this->internalError) {
             $this->sendInternalError();
+            return false;
         }
         if ($this->cacheok) {
             header("HTTP/1.1 304 Not Modified");
-            return;
+            return true;
         }
         if (is_null($this->path)) {
             header("HTTP/1.0 404 Not Found");
-            return;
+            return false;
         }
         if ($this->badrange) {
             header("HTTP/1.1 416 Range Not Satisfiable");
-            return;
+            return false;
         }
         if ($this->istext) {
-            $this->serveText();
-            return;
+            return $this->serveText();
         }
-        $this->sendContent();
+        return $this->sendContent();
     }
 
     /**
