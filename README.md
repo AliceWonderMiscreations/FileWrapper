@@ -36,7 +36,7 @@ Install
 When there is a release, you can add this to a composer project via:
 
     "require": {
-        "awonderphp/filewrapper": "^1.0"
+        "awonderphp/filewrapper": "^1.1"
     },
     
 As long as your `composer.json` allows the [Packagist](https://packagist.org/)
