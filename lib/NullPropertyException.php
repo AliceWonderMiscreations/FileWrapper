@@ -2,7 +2,7 @@
 declare(strict_types = 1);
 
 /**
- * Catchable exception for when properties are not properly set
+ * Catchable exception for when properties are not properly set.
  *
  * @package AWonderPHP\FileWrapper
  * @author  Alice Wonder <paypal@domblogger.net>
@@ -29,13 +29,17 @@ class NullPropertyException extends \ErrorException
     /**
      * Error message when a class property is null.
      *
-     * @param string $property The property that is null
+     * @param string $property The property that is null.
      *
      * @return \ErrorException
      */
     public static function propertyIsNull(string $property)
     {
-        return new self(sprintf('The %s property is null. This should not have happened.', $property));
-    }
-}
+        return new self(sprintf(
+            'The %s property is null. This should not have happened.',
+            $property
+        ));
+    }//end propertyIsNull()
+}//end class
+
 ?>
