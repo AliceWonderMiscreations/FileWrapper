@@ -33,7 +33,7 @@ file it has is up to date.
 Install
 -------
 
-When there is a release, you can add this to a composer project via:
+You can add this to a composer project via:
 
     "require": {
         "awonderphp/filewrapper": "^1.1"
@@ -121,12 +121,12 @@ Example Usage
 This example serves an image file:
 
     use \AWonderPHP\FileWrapper\FileWrapper as FileWrapper;
-    $obj = new FileWrapper('/srv/images/sexy.jpg');
+    $obj = new FileWrapper('/srv/images/image.jpg');
     $obj->sendfile();
     exit();
 
-The class will figure out the file is `image/jpeg` and serve the file to the
-requesting client as such.
+Assuming the file actually is a JPEG image, the class will figure out the file
+MIME type is `image/jpeg` and serve the file to the requesting client as such.
 
 ### Audio Download
 
@@ -134,7 +134,7 @@ This example uses all five parameters to serve an audio file that the client
 save to disk:
 
     use \AWonderPHP\FileWrapper\FileWrapper as FileWrapper;
-    $obj = new FileWrapper('/srv/media/549805.mka', 'teaseme.mka', 'audio/x-matroska', 0, true);
+    $obj = new FileWrapper('/srv/media/549805.mka', 'waterfall.mka', 'audio/x-matroska', 0, true);
     $obj->sendfile();
     exit();
 
@@ -147,7 +147,7 @@ client knowing what type of file is being downloaded.
 
 We set the seconds for caching the file to 0 since it is a download, though
 honestly that can be set to `null` as the cache time is not applicable to file
-transfer.
+download.
 
 Finally, we use `true` as the last argument so that the server sends the right
 header to trigger the client to save the file to disk rather than open it in
@@ -226,4 +226,7 @@ download wrapper, and for HTML5 media with partial content requests.
 
 It “works for me”.
 
-Yes, I do need to create actual unit tests.
+Yes, I do need to create actual unit tests. Researching how to do unit tests
+for a download wrapper is something I am currently doing, it is not trivial
+as it involves interpreting headers sent by the client.
+
