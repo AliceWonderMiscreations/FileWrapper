@@ -2,7 +2,7 @@
 declare(strict_types = 1);
 
 /**
- * Catchable exception for when the wrong variable type is used as a parameter
+ * Catchable exception for when the wrong variable type is used as a parameter.
  *
  * @package AWonderPHP\FileWrapper
  * @author  Alice Wonder <paypal@domblogger.net>
@@ -27,42 +27,54 @@ namespace AWonderPHP\FileWrapper;
 class TypeErrorException extends \TypeError
 {
     /**
-     * Exception message when maxage is wrong type
+     * Exception message when maxage is wrong type.
      *
-     * @param mixed $var The parameter that was supplied
+     * @param mixed $var The parameter that was supplied.
      *
      * @return \TypeError
      */
     public static function maxageWrongType($var)
     {
         $type = gettype($var);
-        return new self(sprintf('The $maxage parameter must be an Integer, \DateInterval object, or a string. You supplied a %s.', $type));
-    }
+        return new self(sprintf(
+            'The $maxage parameter must be an Integer, \DateInterval object, or a string. You supplied a %s.',
+            $type
+        ));
+    }//end maxageWrongType()
+
 
     /**
-     * Exception message when MIME var is wrong type
+     * Exception message when MIME var is wrong type.
      *
-     * @param mixed $var The parameter that was supplied
+     * @param mixed $var The parameter that was supplied.
      *
      * @return \TypeError
      */
     public static function mimeWrongType($var)
     {
         $type = gettype($var);
-        return new self(sprintf('The $mime parameter must be NULL or a string. You supplied a %s.', $type));
-    }
+        return new self(sprintf(
+            'The $mime parameter must be NULL or a string. You supplied a %s.',
+            $type
+        ));
+    }//end mimeWrongType()
+
 
     /**
-     * Exception message when request var is wrong type
+     * Exception message when request var is wrong type.
      *
-     * @param mixed $var The parameter that was supplied
+     * @param mixed $var The parameter that was supplied.
      *
      * @return \TypeError
      */
     public static function requestWrongType($var)
     {
         $type = gettype($var);
-        return new self(sprintf('The $request parameter must be NULL or a string. You supplied a %s.', $type));
-    }
-}
+        return new self(sprintf(
+            'The $request parameter must be NULL or a string. You supplied a %s.',
+            $type
+        ));
+    }//end requestWrongType()
+}//end class
+
 ?>

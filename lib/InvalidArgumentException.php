@@ -34,7 +34,8 @@ class InvalidArgumentException extends \InvalidArgumentException
     public static function negativeMaxAge()
     {
         return new self(sprintf('The file maxage parameter can not be negative.'));
-    }
+    }//end negativeMaxAge()
+
 
     /**
      * Exception message when supplied maxage string can't be parsed by strtotime
@@ -44,6 +45,7 @@ class InvalidArgumentException extends \InvalidArgumentException
     public static function invalidDateString()
     {
         return new self(sprintf('The strtotime() command could not parse the string you supplied.'));
-    }
-}
+    }//end invalidDateString()
+}//end class
+
 ?>
